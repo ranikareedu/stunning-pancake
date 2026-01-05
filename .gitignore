@@ -1,0 +1,53 @@
+# Dependencies
+/node_modules
+
+# Build outputs
+/dist
+/tmp
+/out-tsc
+
+# IDEs and editors
+/.idea
+/.vscode/*
+!/.vscode/extensions.json
+!/.vscode/launch.json
+!/.vscode/tasks.json
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Angular Cache
+/.angular/cache
+
+# Testing
+/coverage
+/reports
+
+# SonarQube
+.scannerwork/
+.sonar/
+
+# Environment files
+.env
+.env.local
+*.local
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Snyk
+.snyk.d/
+
+# Misc
+*.log
+

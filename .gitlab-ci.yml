@@ -1,0 +1,207 @@
+# ============================================
+# GitLab CI Pipeline
+# Angular + SonarQube + Snyk Integration
+# ============================================
+
+image: node:20-alpine
+
+stages:
+  - install
+  - test
+  - security
+  - quality
+  - build
+
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0" # Required for SonarQube analysis
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .npm/
+    - node_modules/
+    - .sonar/cache/
+
+# ============================================
+# Install Dependencies
+# ============================================
+install:
+  stage: install
+  script:
+    - npm ci --cache .npm --prefer-offline
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
+# ============================================
+# Lint Job
+# ============================================
+lint:
+  stage: test
+  needs: [install]
+  script:
+    - npm run lint
+  allow_failure: false # Fail pipeline on lint errors
+
+# ============================================
+# Unit Tests with Coverage
+# ============================================
+test:
+  stage: test
+  needs: [install]
+  image: node:20
+  before_script:
+    # Install Chrome for headless testing
+    - apt-get update && apt-get install -y chromium
+    - export CHROME_BIN=/usr/bin/chromium
+  script:
+    - npm run test:ci
+  artifacts:
+    paths:
+      - coverage/
+      - reports/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/my-angular-app/cobertura-coverage.xml
+      junit: reports/ut_report.xml
+    expire_in: 1 week
+  coverage: '/Statements\s*:\s*([^%]+)/'
+
+# ============================================
+# Snyk Dependency Scan
+# ============================================
+snyk-dependency-scan:
+  stage: security
+  needs: [install]
+  image: snyk/snyk:node-20
+  script:
+    - snyk auth $SNYK_TOKEN
+    - snyk test --severity-threshold=high --fail-on=all
+  allow_failure: false # Fail on vulnerabilities
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================
+# Snyk Code Analysis (SAST)
+# ============================================
+snyk-code-scan:
+  stage: security
+  needs: [install]
+  image: snyk/snyk:node-20
+  script:
+    - snyk auth $SNYK_TOKEN
+    - snyk code test --severity-threshold=high
+  allow_failure: false
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================
+# Snyk Monitor (for tracking)
+# ============================================
+snyk-monitor:
+  stage: security
+  needs: [install]
+  image: snyk/snyk:node-20
+  script:
+    - snyk auth $SNYK_TOKEN
+    - snyk monitor --org=$SNYK_ORG
+  allow_failure: true # Don't fail on monitoring
+  only:
+    - main
+
+# ============================================
+# SonarQube Analysis
+# ============================================
+sonarqube:
+  stage: quality
+  needs: [test]
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  script:
+    - sonar-scanner
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.host.url=$SONAR_HOST_URL
+      -Dsonar.token=$SONAR_TOKEN
+      -Dsonar.projectKey=$CI_PROJECT_NAME
+      -Dsonar.projectName=$CI_PROJECT_NAME
+      -Dsonar.sources=src
+      -Dsonar.tests=src
+      -Dsonar.test.inclusions=**/*.spec.ts
+      -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts
+      -Dsonar.typescript.lcov.reportPaths=coverage/my-angular-app/lcov.info
+      -Dsonar.testExecutionReportPaths=reports/ut_report.xml
+  allow_failure: false # Fail if Quality Gate fails
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ============================================
+# SonarCloud Alternative (uncomment if using)
+# ============================================
+# sonarcloud:
+#   stage: quality
+#   needs: [test]
+#   image:
+#     name: sonarsource/sonar-scanner-cli:latest
+#     entrypoint: [""]
+#   script:
+#     - sonar-scanner
+#       -Dsonar.qualitygate.wait=true
+#       -Dsonar.host.url=https://sonarcloud.io
+#       -Dsonar.organization=$SONAR_ORGANIZATION
+#       -Dsonar.token=$SONAR_TOKEN
+#   only:
+#     - main
+#     - develop
+#     - merge_requests
+
+# ============================================
+# Build Application
+# ============================================
+build:
+  stage: build
+  needs: [lint, test, sonarqube, snyk-dependency-scan]
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+    - tags
+
+# ============================================
+# Merge Request Quality Gate
+# ============================================
+quality-gate:
+  stage: build
+  needs:
+    - job: lint
+      artifacts: false
+    - job: test
+      artifacts: false
+    - job: sonarqube
+      artifacts: false
+    - job: snyk-dependency-scan
+      artifacts: false
+    - job: snyk-code-scan
+      artifacts: false
+  script:
+    - echo "✅ All quality checks passed!"
+  only:
+    - merge_requests
+

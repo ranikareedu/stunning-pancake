@@ -1,0 +1,43 @@
+# Snyk (https://snyk.io) policy file
+# This file configures Snyk's behavior for this project
+
+version: v1.25.0
+
+# ============================================
+# Severity Threshold
+# ============================================
+# Only fail on high or critical vulnerabilities
+# Options: low, medium, high, critical
+severity-threshold: high
+
+# ============================================
+# Ignore Rules
+# ============================================
+# Ignore specific vulnerabilities (use with caution!)
+# Format:
+# ignore:
+#   SNYK-JS-PACKAGENAME-123456:
+#     - '*':
+#         reason: 'Explanation for ignoring'
+#         expires: '2024-12-31T00:00:00.000Z'
+
+ignore: {}
+
+# ============================================
+# Patch Rules
+# ============================================
+# Apply patches to vulnerable dependencies
+patch: {}
+
+# ============================================
+# Exclude Patterns
+# ============================================
+# Files and directories to exclude from scanning
+exclude:
+  global:
+    - "node_modules"
+    - "dist"
+    - "coverage"
+    - "*.spec.ts"
+    - "*.test.ts"
+

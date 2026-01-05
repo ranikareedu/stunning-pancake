@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/snyk/snyk/master/src/cli/schemas/snyk-config.json",
+  "version": "1.0.0",
+  "analysis": {
+    "severity-threshold": "high",
+    "fail-on": "all"
+  },
+  "prune-policy": {
+    "prune-unresolved": true
+  },
+  "test": {
+    "severity-threshold": "high",
+    "fail-on": "upgradable"
+  },
+  "monitor": {
+    "target-reference": "main"
+  }
+}
+
