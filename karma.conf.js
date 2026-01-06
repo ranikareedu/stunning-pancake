@@ -45,7 +45,7 @@ module.exports = function (config) {
 
     // SonarQube reporter configuration
     sonarqubeReporter: {
-      basePath: "src/app",
+      basePath: "src",
       filePattern: "**/*.spec.ts",
       outputFolder: "reports",
       reportName: "ut_report.xml",
