@@ -8,6 +8,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: read
+  packages: read
+
 jobs:
   sonarcloud:
     name: Build, Test & Analyze
@@ -34,6 +39,12 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:ci
+
+      - name: Verify coverage file exists
+        run: |
+          echo "Coverage files:"
+          ls -la coverage/my-angular-app/ || echo "No coverage directory found"
+          cat coverage/my-angular-app/lcov.info || echo "No lcov.info found"
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
